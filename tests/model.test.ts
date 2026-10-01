@@ -38,9 +38,26 @@ test('malformed JSON, extra properties, wrong types, mismatched quotes and nonem
   }
   t.mock.method(globalThis,'fetch',async()=>Response.json({message:{content:'not JSON'}}));assert.equal((await analyzeWithGemma(seedInput,true)).origin,'sample');
 });
-test('connection failures and non-Gemma configuration never claim live inference',async t=>{
-  setup(t);t.mock.method(globalThis,'fetch',async()=>{throw new Error('offline');});assert.match((await analyzeWithGemma(seedInput)).warning!,/offline/);
-  process.env.GEMMA_MODEL='not-gemma:latest';assert.equal((await modelStatus()).connected,false);assert.match((await analyzeWithGemma(seedInput)).warning!,/Configure an open-weight Gemma/);
+test('offline Ollama and invalid model configuration have distinct states',async t=>{
+  setup(t);
+  let calls = 0;
+  t.mock.method(globalThis,'fetch',async()=>{calls += 1; throw new Error('offline');});
+  const offline = await modelStatus();
+  assert.equal(offline.state,'offline');
+  assert.equal(offline.connected,false);
+  assert.deepEqual(offline.availableModels,[]);
+  assert.match(offline.message,/Ollama/);
+  assert.match((await analyzeWithGemma(seedInput)).warning!,/offline/);
+
+  process.env.GEMMA_MODEL='not-gemma:latest';
+  const callsBeforeInvalid = calls;
+  const invalid = await modelStatus();
+  assert.equal(invalid.state,'invalid-model');
+  assert.equal(invalid.connected,false);
+  assert.deepEqual(invalid.availableModels,[]);
+  assert.match(invalid.message,/Ollama/);
+  assert.equal(calls,callsBeforeInvalid);
+  assert.match((await analyzeWithGemma(seedInput)).warning!,/Configure an open-weight Gemma/);
 });
 test('model cannot invent a route to an unrecognized destination',async t=>{
   setup(t);
@@ -51,7 +68,56 @@ test('model cannot invent a route to an unrecognized destination',async t=>{
   assert.equal(result.afterRoute,false);
   assert.match(result.warning!,/No live model result/);
 });
-test('model availability validates tags and normalizes the latest tag',async t=>{
-  setup(t);process.env.GEMMA_MODEL='gemma3';t.mock.method(globalThis,'fetch',async()=>Response.json({models:[{name:'gemma3:latest'}]}));assert.equal((await modelStatus()).connected,true);
-  t.mock.method(globalThis,'fetch',async()=>Response.json({models:[null]}));assert.equal((await modelStatus()).connected,false);
+test('ready and model-missing states normalize tags and expose only Gemma models',async t=>{
+  setup(t);
+  process.env.GEMMA_MODEL='gemma3';
+  process.env.OLLAMA_BASE_URL='https://ollama.example.com/';
+  let requestUrl: unknown;
+  let requestOptions: RequestInit | undefined;
+  t.mock.method(globalThis,'fetch',async(url:unknown,options:RequestInit)=>{
+    requestUrl = url;
+    requestOptions = options;
+    return Response.json({models:[
+      {name:'gemma3'},
+      {name:'llama3:latest'},
+      {name:'gemma2:2b'},
+      {name:'gemma3'},
+    ]});
+  });
+  const ready = await modelStatus();
+  assert.equal(ready.state,'ready');
+  assert.equal(ready.connected,true);
+  assert.deepEqual(ready.availableModels,['gemma3:latest','gemma2:2b']);
+  assert.equal(requestUrl,'https://ollama.example.com/api/tags');
+  assert.match(ready.message,/Ollama/);
+  assert.doesNotMatch(ready.message,/local|inference/i);
+  assert.equal(requestOptions?.cache,'no-store');
+  assert.ok(requestOptions?.signal);
+
+  process.env.GEMMA_MODEL='gemma4:4b';
+  const missing = await modelStatus();
+  assert.equal(missing.state,'model-missing');
+  assert.equal(missing.connected,false);
+  assert.deepEqual(missing.availableModels,['gemma3:latest','gemma2:2b']);
+  assert.match(missing.message,/Ollama reachable/);
+});
+
+test('malformed or unexpected Ollama tag payloads never report a model as ready',async t=>{
+  setup(t);
+  const payloads: unknown[] = [
+    null,
+    {models:'gemma3:4b'},
+    {models:[null]},
+    {models:[{name:42}]},
+    {models:[{name:'gemma3:4b '}]},
+    {models:[{name:'gemma3:4b'.repeat(100)}]},
+  ];
+  t.mock.method(globalThis,'fetch',async()=>Response.json(payloads.shift()));
+  for (let index = 0; index < 6; index += 1) {
+    const status = await modelStatus();
+    assert.equal(status.state,'offline');
+    assert.equal(status.connected,false);
+    assert.deepEqual(status.availableModels,[]);
+    assert.match(status.message,/Ollama/);
+  }
 });

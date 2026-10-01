@@ -12,17 +12,22 @@
   },
   "dependencies": {
     "diff": "^9.0.0",
+    "fontkit": "^2.0.4",
     "lucide-react": "^0.468.0",
     "next": "^16.3.7",
+    "pdfmake": "^0.3.11",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
+    "@types/fontkit": "^2.0.9",
     "@types/node": "^22.0.0",
+    "@types/pdfmake": "^0.3.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "pdfjs-dist": "^6.3.289",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   },

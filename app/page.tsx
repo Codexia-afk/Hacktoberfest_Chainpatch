@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Brand } from "@/components/ui";
 import { InteractionMap } from "@/components/interaction-map";
+import { OllamaSpotlight } from "@/components/ollama-spotlight";
 export default function Home() {
   return (
     <div className="landing">
@@ -18,7 +19,7 @@ export default function Home() {
         <Brand />
         <nav aria-label="Main navigation">
           <Link href="/playground">Presentation lab</Link>
-          <Link href="/gemma">Live Gemma</Link>
+          <Link href="/gemma">Ollama + Gemma</Link>
           <Link href="/docs">How it works</Link>
           <Link href="/workspace">Workspace</Link>
           <Link className="button button-dark small" href="/review/demo">
@@ -46,7 +47,7 @@ export default function Home() {
                 Run the interactive demo <Play size={15} />
               </Link>
               <Link href="/gemma" className="button button-dark">
-                Try Gemma live <Play size={15} />
+                Try Ollama + Gemma live <Play size={15} />
               </Link>
               <Link href="/create" className="text-link">
                 Review your own skills <ArrowUpRight size={16} />
@@ -82,6 +83,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        <OllamaSpotlight />
         <section className="landing-map-section">
           <div className="landing-map-heading">
             <div>

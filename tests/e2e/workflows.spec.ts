@@ -117,6 +117,7 @@ test('landing, safe baseline, exposed update, narrow repair, persisted evidence 
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('A small update.');
+  await expect(page.getByRole('region', { name: 'Ollama local AI' })).toContainText('OLLAMA + GEMMA');
   await noPageOverflow(page);
   await screenshot(page, info, 'landing');
   await page.getByRole('link', { name: 'Run the interactive demo' }).click();

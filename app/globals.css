@@ -549,6 +549,75 @@ svg {
   background: #b4bca7;
   flex: 1;
 }
+.ollama-spotlight {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 23px 26px;
+  margin: 0 0 76px;
+  border: 1px solid #dfd1b8;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+.ollama-spotlight.ready {
+  border-color: #cbdcc5;
+  background: #f3f8ef;
+}
+.ollama-spotlight-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: var(--dark);
+  color: var(--lime);
+}
+.ollama-spotlight-copy .small-caps {
+  color: #728166;
+}
+.ollama-spotlight-copy h2 {
+  margin: 6px 0 5px;
+  font-size: 21px;
+}
+.ollama-spotlight-copy p {
+  max-width: 700px;
+  margin: 0;
+  color: #687565;
+  font-size: 13px;
+}
+.ollama-spotlight-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 12px;
+  margin-top: 11px;
+  font-size: 11px;
+}
+.ollama-spotlight-status strong {
+  color: #7c531d;
+  font-size: 10px;
+  letter-spacing: .7px;
+}
+.ollama-spotlight.ready .ollama-spotlight-status strong {
+  color: #477052;
+}
+.ollama-spotlight-status span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ollama-spotlight-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 13px;
+  min-width: 155px;
+}
+.ollama-spotlight-actions .text-link {
+  justify-content: center;
+  font-size: 11px;
+}
 .landing-map-section {
   margin-bottom: 82px;
 }
@@ -2796,6 +2865,19 @@ summary::-webkit-details-marker {
   }
   .hero-annotation {
     display: none;
+  }
+  .ollama-spotlight {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 19px;
+    margin-bottom: 50px;
+  }
+  .ollama-spotlight-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
   }
   .landing-map-heading {
     align-items: flex-start;

@@ -26,6 +26,17 @@ export function modelConfig() {
 export const isGemmaModel = (model: string) =>
   /(?:^|\/)gemma[\w.-]*(?::[^\s]+)?$/i.test(model);
 
+export type ModelStatusState = 'ready' | 'model-missing' | 'offline' | 'invalid-model';
+
+export type ModelStatus = {
+  endpoint: string;
+  model: string;
+  connected: boolean;
+  message: string;
+  state: ModelStatusState;
+  availableModels: string[];
+};
+
 export const hypothesisSchema = z
   .object({
     beforeForwardsPrivate: z.boolean(),
@@ -41,42 +52,67 @@ export const hypothesisSchema = z
 
 type ModelHypothesis = z.infer<typeof hypothesisSchema>;
 
-export async function modelStatus() {
+const modelTagsSchema = z.object({
+  models: z.array(
+    z.object({
+      name: z.string().min(1).max(256).regex(/^\S+$/),
+    }),
+  ),
+});
+
+const normalizeModelTag = (name: string) =>
+  name.includes(':') ? name : `${name}:latest`;
+
+export async function modelStatus(): Promise<ModelStatus> {
   const config = modelConfig();
+  const unavailable = (
+    state: Exclude<ModelStatusState, 'ready'>,
+    message: string,
+    availableModels: string[] = [],
+  ): ModelStatus => ({
+    ...config,
+    connected: false,
+    message,
+    state,
+    availableModels,
+  });
+
   if (!isGemmaModel(config.model)) {
-    return {
-      ...config,
-      connected: false,
-      message: 'Configure an open-weight Gemma model',
-    };
+    return unavailable(
+      'invalid-model',
+      'Ollama model configuration is invalid; configure an open-weight Gemma model',
+    );
   }
+
   try {
     const response = await fetch(`${config.endpoint}/api/tags`, {
       signal: AbortSignal.timeout(2200),
       cache: 'no-store',
     });
     if (!response.ok) throw new Error('Ollama did not respond successfully');
-    const data = z
-      .object({ models: z.array(z.object({ name: z.string() })) })
-      .parse(await response.json());
-    const normalized = (name: string) =>
-      name.includes(':') ? name : `${name}:latest`;
-    const ready = data.models.some(
-      (model) => normalized(model.name) === normalized(config.model),
+    const data = modelTagsSchema.parse(await response.json());
+    const availableModels = Array.from(
+      new Set(
+        data.models
+          .map(({ name }) => normalizeModelTag(name))
+          .filter(isGemmaModel),
+      ),
     );
+    const ready = availableModels.includes(normalizeModelTag(config.model));
     return {
       ...config,
       connected: ready,
+      state: ready ? 'ready' : 'model-missing',
+      availableModels,
       message: ready
-        ? 'Gemma ready · local Ollama'
+        ? `Ollama reachable; ${config.model} is installed (tags check only)`
         : `Ollama reachable; ${config.model} is not installed`,
     };
   } catch {
-    return {
-      ...config,
-      connected: false,
-      message: 'Gemma unavailable · sample / local analysis enabled',
-    };
+    return unavailable(
+      'offline',
+      'Ollama unavailable; the configured endpoint could not provide a valid model list',
+    );
   }
 }
 
